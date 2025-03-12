@@ -168,9 +168,10 @@ contract SoulboundNFT is ERC721, ERC721URIStorage, AccessControl {
     function _beforeTokenTransfer(
         address from,
         address to,
-        uint256 tokenId
+        uint256 firstTokenId,
+        uint256 batchSize
     ) internal override(ERC721) {
-        super._beforeTokenTransfer(from, to, tokenId);
+        super._beforeTokenTransfer(from, to, firstTokenId, batchSize);
         
         // If this is not a mint, prevent transfer
         if (from != address(0)) {
@@ -198,7 +199,7 @@ contract SoulboundNFT is ERC721, ERC721URIStorage, AccessControl {
         return super.tokenURI(tokenId);
     }
 
-    function supportsInterface(bytes4 interfaceId) public view override(ERC721, AccessControl) returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage, AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 }

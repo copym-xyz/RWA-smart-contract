@@ -1,0 +1,14 @@
+{
+  "network": "amoy",
+  "chainId": 80002,
+  "deployer": "0x10442808250a00232C429fc7eCAcdc8ADB283E84",
+  "contracts": {
+    "SoulboundNFT": {
+      "address": "0x191f43EbBe836241f00B5F01b9fC845469b5A431"
+    },
+    "CrossChainBridge": {
+      "address": "0x1E45C6Efd10ea6c7A1B6e0E86612a92dA9e4ecaC"
+    }
+  },
+  "timestamp": "2025-03-12T13:48:15.250Z"
+}

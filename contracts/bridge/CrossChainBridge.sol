@@ -58,13 +58,13 @@ contract CrossChainBridge is AccessControl, IBridge {
      * @param soulboundContract Address of the SoulboundNFT contract
      * @param tokenId Token ID to verify
      * @param targetChain Target chain for verification
-     * @return requestId The ID of the verification request
+     * @return Whether the identity was verified
      */
     function verifyIdentity(
         address soulboundContract, 
         uint256 tokenId, 
         string memory targetChain
-    ) external override returns (bool) {
+    ) external view override returns (bool) {
         SoulboundNFT soulbound = SoulboundNFT(soulboundContract);
         
         // Get the DID from the token
@@ -168,8 +168,8 @@ contract CrossChainBridge is AccessControl, IBridge {
         // Pack the data to be sent
         bytes memory data = abi.encode(issuer, name, symbol);
         
-        // Send the message
-        sendCrossChainMessage(targetChain, data);
+        // Send the message - Direct call instead of using this.
+        this.sendCrossChainMessage(targetChain, data);
     }
     
     /**
