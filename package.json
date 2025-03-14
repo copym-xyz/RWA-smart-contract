@@ -13,7 +13,8 @@
   "dependencies": {
     "@openzeppelin/contracts": "^4.9.3",
     "@solana/spl-token": "^0.4.13",
-    "@solana/web3.js": "^1.98.0"
+    "@solana/web3.js": "^1.98.0",
+    "@wormhole-foundation/wormhole-solidity-sdk": "github:wormhole-foundation/wormhole-solidity-sdk#main"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^2.0.2",

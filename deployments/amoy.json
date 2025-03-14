@@ -4,11 +4,11 @@
   "deployer": "0x10442808250a00232C429fc7eCAcdc8ADB283E84",
   "contracts": {
     "SoulboundNFT": {
-      "address": "0x191f43EbBe836241f00B5F01b9fC845469b5A431"
+      "address": "0x53730f6767433017Dc98e7c5fB94FD87F7580BdD"
     },
     "CrossChainBridge": {
-      "address": "0x1E45C6Efd10ea6c7A1B6e0E86612a92dA9e4ecaC"
+      "address": "0xc6C6aE41F4f2fBf510ecC52f1B55a4E601ecdC59"
     }
   },
-  "timestamp": "2025-03-12T13:48:15.250Z"
+  "timestamp": "2025-03-13T09:33:58.379Z"
 }
