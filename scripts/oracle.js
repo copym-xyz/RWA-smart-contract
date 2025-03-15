@@ -15,7 +15,7 @@ const bridgeAbi = [
 
 async function main() {
   // Polygon setup
-  const provider = new ethers.providers.JsonRpcProvider(POLYGON_RPC_URL);
+  const provider = new ethers.JsonRpcProvider(POLYGON_RPC_URL);
   const wallet = new ethers.Wallet(POLYGON_PRIVATE_KEY, provider);
   const bridge = new ethers.Contract(BRIDGE_ADDRESS, bridgeAbi, wallet);
 

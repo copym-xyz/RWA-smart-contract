@@ -6,90 +6,96 @@ require("dotenv").config();
 async function main() {
   console.log("Starting deployment to Polygon Amoy network...");
 
-  const provider = new ethers.providers.JsonRpcProvider(process.env.POLYGON_RPC_URL);
+  // Initialize provider and deployer
+  const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL);
   const deployer = new ethers.Wallet(process.env.POLYGON_PRIVATE_KEY, provider);
   console.log(`Deploying contracts with account: ${deployer.address}`);
-  console.log(`Account balance: ${ethers.utils.formatEther(await deployer.getBalance())} MATIC`);
 
+  // Wormhole and Token Bridge addresses for Polygon Amoy
   const WORMHOLE_ADDRESS = "0x4a8bc80Ed5a4067f1CCf107057b8270E0cC11A78";
   const TOKEN_BRIDGE_ADDRESS = "0x377D55a7928c046E18eEbb61977e760d2af53966";
-  console.log(`Wormhole Address (checksummed): ${WORMHOLE_ADDRESS}`);
-  console.log(`Token Bridge Address (checksummed): ${TOKEN_BRIDGE_ADDRESS}`);
 
-  // Gas settings
+  // Gas options
   const gasOptions = {
-    maxPriorityFeePerGas: ethers.utils.parseUnits("30", "gwei"), // 30 Gwei
-    maxFeePerGas: ethers.utils.parseUnits("50", "gwei"),        // 50 Gwei
+    maxPriorityFeePerGas: ethers.parseUnits("30", "gwei"),
+    maxFeePerGas: ethers.parseUnits("50", "gwei"),
   };
 
-  // Deploy SoulboundNFT contract
-  console.log("Deploying SoulboundNFT contract...");
+  // Deploy SoulboundNFT
   const SoulboundNFT = await ethers.getContractFactory("SoulboundNFT", deployer);
   const soulboundNFT = await SoulboundNFT.deploy(gasOptions);
   await soulboundNFT.deployed();
   console.log(`SoulboundNFT deployed to: ${soulboundNFT.address}`);
 
-  // Deploy CrossChainBridge contract
-  console.log("Deploying CrossChainBridge contract...");
+  // Deploy CrossChainBridge
   const CrossChainBridge = await ethers.getContractFactory("CrossChainBridge", deployer);
   const crossChainBridge = await CrossChainBridge.deploy(WORMHOLE_ADDRESS, TOKEN_BRIDGE_ADDRESS, gasOptions);
   await crossChainBridge.deployed();
   console.log(`CrossChainBridge deployed to: ${crossChainBridge.address}`);
 
+  // Define commodities to deploy
+  const commodities = [
+    { name: "Gold Token", symbol: "GOLD", type: "Gold" },
+    { name: "Oil Token", symbol: "OIL", type: "Oil" },
+  ];
+
+  // Object to store deployed commodity tokens
+  const commodityTokens = {};
+
+  // Deploy CommodityToken instances
+  for (const commodity of commodities) {
+    const CommodityToken = await ethers.getContractFactory("CommodityToken", deployer);
+    const commodityToken = await CommodityToken.deploy(commodity.name, commodity.symbol, commodity.type, gasOptions);
+    await commodityToken.deployed();
+    console.log(`${commodity.type} Token deployed to: ${commodityToken.address}`);
+    commodityTokens[commodity.type] = commodityToken;
+  }
+
   // Set up roles
-  console.log("Setting up roles...");
   const VERIFIER_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("VERIFIER_ROLE"));
   const BRIDGE_ADMIN_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("BRIDGE_ADMIN_ROLE"));
   const ORACLE_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("ORACLE_ROLE"));
+  const MINTER_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("MINTER_ROLE"));
+  const BRIDGE_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("BRIDGE_ROLE"));
 
-  console.log("Granting roles to deployer...");
-  let tx = await soulboundNFT.grantRole(VERIFIER_ROLE, deployer.address, gasOptions);
-  await tx.wait();
+  // Grant roles for SoulboundNFT
+  await soulboundNFT.grantRole(VERIFIER_ROLE, deployer.address, gasOptions);
   console.log(`Granted VERIFIER_ROLE to ${deployer.address} in SoulboundNFT`);
 
-  tx = await crossChainBridge.grantRole(BRIDGE_ADMIN_ROLE, deployer.address, gasOptions);
-  await tx.wait();
-  console.log(`Granted BRIDGE_ADMIN_ROLE to ${deployer.address} in CrossChainBridge`);
+  // Grant roles for CrossChainBridge
+  await crossChainBridge.grantRole(BRIDGE_ADMIN_ROLE, deployer.address, gasOptions);
+  await crossChainBridge.grantRole(ORACLE_ROLE, deployer.address, gasOptions);
+  console.log(`Granted BRIDGE_ADMIN_ROLE and ORACLE_ROLE to ${deployer.address} in CrossChainBridge`);
 
-  tx = await crossChainBridge.grantRole(ORACLE_ROLE, deployer.address, gasOptions);
-  await tx.wait();
-  console.log(`Granted ORACLE_ROLE to ${deployer.address} in CrossChainBridge`);
+  // Grant roles for CommodityTokens
+  for (const commodity of Object.values(commodityTokens)) {
+    await commodity.grantRole(MINTER_ROLE, deployer.address, gasOptions);
+    await commodity.grantRole(BRIDGE_ROLE, crossChainBridge.address, gasOptions);
+    console.log(`Granted MINTER_ROLE to ${deployer.address} and BRIDGE_ROLE to ${crossChainBridge.address} in ${commodity.address}`);
+  }
 
   // Set bridge endpoint
-  console.log("Setting up bridge endpoints...");
-  tx = await crossChainBridge.setBridgeEndpoint(
+  await crossChainBridge.setBridgeEndpoint(
     "solana_devnet",
     process.env.SOLANA_IDENTITY_PROGRAM_ID || "https://api.devnet.solana.com",
     gasOptions
   );
-  await tx.wait();
   console.log("Set bridge endpoint for Solana Devnet");
-
-  // Register DID
-  console.log("Registering DID for deployer...");
-  const did = `did:eth:${deployer.address}`;
-  const credentialHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("sample-credential"));
-  const credentialCID = process.env.PINATA_API_KEY ? "QmTestCID123" : "QmTestCID123";
-  tx = await soulboundNFT.verifyIdentity(deployer.address, did, credentialHash, credentialCID, gasOptions);
-  await tx.wait();
-  console.log(`Registered DID: ${did}`);
-
-  const tokenId = await soulboundNFT.didToTokenId(did);
-  console.log(`Token ID for ${did}: ${tokenId.toString()}`);
 
   // Save deployment data
   const artifactsDir = path.join(__dirname, "../deployments");
-  if (!fs.existsSync(artifactsDir)) {
-    fs.mkdirSync(artifactsDir, { recursive: true });
-  }
+  if (!fs.existsSync(artifactsDir)) fs.mkdirSync(artifactsDir, { recursive: true });
 
   const deploymentData = {
-    network: process.env.POLYGON_NETWORK || "amoy",
+    network: "amoy",
     chainId: parseInt(process.env.POLYGON_CHAIN_ID) || 80002,
     deployer: deployer.address,
     contracts: {
       SoulboundNFT: { address: soulboundNFT.address },
       CrossChainBridge: { address: crossChainBridge.address },
+      ...Object.fromEntries(
+        Object.entries(commodityTokens).map(([type, token]) => [`CommodityToken_${type}`, { address: token.address }])
+      ),
     },
     timestamp: new Date().toISOString(),
   };
@@ -97,8 +103,6 @@ async function main() {
   const deploymentPath = path.join(artifactsDir, "amoy.json");
   fs.writeFileSync(deploymentPath, JSON.stringify(deploymentData, null, 2));
   console.log(`Deployment data saved to ${deploymentPath}`);
-
-  console.log("Polygon Amoy deployment completed successfully!");
 }
 
 main()

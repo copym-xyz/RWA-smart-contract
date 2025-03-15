@@ -1,8 +1,8 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-describe("CrossChainBridge", function () {
-  let soulboundNFT, crossChainBridge, owner, addr1;
+describe("CrossChainBridge with CommodityToken", function () {
+  let soulboundNFT, crossChainBridge, commodityToken, owner, addr1;
 
   beforeEach(async () => {
     [owner, addr1] = await ethers.getSigners();
@@ -18,19 +18,35 @@ describe("CrossChainBridge", function () {
     );
     await crossChainBridge.deployed();
 
+    const CommodityToken = await ethers.getContractFactory("CommodityToken");
+    commodityToken = await CommodityToken.deploy("Gold Token", "GOLD", "Gold");
+    await commodityToken.deployed();
+
     await soulboundNFT.grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes("VERIFIER_ROLE")), owner.address);
     await crossChainBridge.grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes("BRIDGE_ADMIN_ROLE")), owner.address);
     await crossChainBridge.grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes("ORACLE_ROLE")), owner.address);
+    await commodityToken.grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes("MINTER_ROLE")), owner.address);
+    await commodityToken.grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes("BRIDGE_ROLE")), crossChainBridge.address);
   });
 
-  it("should request and complete verification", async () => {
+  it("should mint and bridge tokens", async () => {
     await crossChainBridge.setBridgeEndpoint("solana_devnet", "test-endpoint");
-    const tx = await crossChainBridge.requestVerification("did:example:123", "solana_devnet");
-    const receipt = await tx.wait();
-    const requestId = receipt.events.find(e => e.event === "VerificationRequested").args.requestId;
 
-    await expect(crossChainBridge.completeVerification(requestId, true))
-      .to.emit(crossChainBridge, "VerificationCompleted")
-      .withArgs(requestId, true);
+    // Mint tokens
+    await commodityToken.mint(owner.address, ethers.utils.parseUnits("100", 18));
+    expect(await commodityToken.balanceOf(owner.address)).to.equal(ethers.utils.parseUnits("100", 18));
+
+    // Approve and bridge tokens
+    await commodityToken.approve(crossChainBridge.address, ethers.utils.parseUnits("50", 18));
+    const tx = await crossChainBridge.bridgeTokens(commodityToken.address, ethers.utils.parseUnits("50", 18), "solana_devnet");
+    const receipt = await tx.wait();
+    const transferId = receipt.events.find(e => e.event === "TokenTransferInitiated").args.transferId;
+
+    // Complete transfer
+    await expect(crossChainBridge.completeTokenTransfer(transferId, true))
+      .to.emit(crossChainBridge, "TokenTransferCompleted")
+      .withArgs(transferId, true);
+
+    expect(await commodityToken.balanceOf(owner.address)).to.equal(ethers.utils.parseUnits("50", 18));
   });
 });

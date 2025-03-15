@@ -7,10 +7,11 @@ async function main() {
   console.log("Starting deployment to Polygon Amoy network...");
 
   // Get deployment account from private key in .env
-  const provider = new ethers.providers.JsonRpcProvider(process.env.POLYGON_RPC_URL);
+  const provider = new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL);
   const deployer = new ethers.Wallet(process.env.POLYGON_PRIVATE_KEY, provider);
   console.log(`Deploying contracts with account: ${deployer.address}`);
-  console.log(`Account balance: ${ethers.utils.formatEther(await deployer.getBalance())} MATIC`);
+  const balance = await provider.getBalance(deployer.address);
+  console.log(`Account balance: ${ethers.formatEther(balance)} MATIC`);
 
   // Wormhole testnet addresses for Polygon Amoy
   const WORMHOLE_ADDRESS = "0x4a8bc80Ed5a4067f1CCf107057b8270E0cC11A78"; // Polygon Amoy Wormhole Core

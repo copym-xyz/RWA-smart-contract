@@ -1,7 +1,8 @@
 use anchor_lang::prelude::*;
 use wormhole_anchor_sdk::{Wormhole, VaaAccount};
+use anchor_spl::token::{Mint, Token, TokenAccount};
 
-declare_id!("YOUR_SOLANA_PROGRAM_ID_HERE"); // Replace with deployed program ID
+declare_id!("YOUR_SOLANA_PROGRAM_ID_HERE");
 
 #[program]
 pub mod identity_program {
@@ -31,7 +32,6 @@ pub mod identity_program {
                 });
                 state.verification_count += 1;
 
-                // Send response back to Polygon
                 let response_payload = serialize(&MessagePayload {
                     msg_type: MessageType::VerificationResponse,
                     data: serialize(&VerificationResponse { request_id, verified: true })?,
@@ -49,6 +49,26 @@ pub mod identity_program {
                     name,
                     symbol,
                 });
+            }
+            MessageType::TokenTransfer => {
+                let (transfer_id, token_address, amount) = deserialize_token_transfer(&payload.data)?;
+                // Mint SPL tokens on Solana
+                let mint_ctx = ctx.accounts.into_mint_context();
+                anchor_spl::token::mint_to(
+                    mint_ctx,
+                    amount as u64,
+                )?;
+
+                // Send confirmation back to Polygon
+                let response_payload = serialize(&MessagePayload {
+                    msg_type: MessageType::TokenTransferResponse,
+                    data: serialize(&TokenTransferResponse { transfer_id, success: true })?,
+                })?;
+                ctx.accounts.wormhole_program.post_message(
+                    &ctx.accounts.authority,
+                    response_payload,
+                    2, // Polygon chain ID
+                )?;
             }
             _ => return Err(ErrorCode::InvalidMessageType.into()),
         }
@@ -73,6 +93,11 @@ pub struct ReceiveMessage<'info> {
     pub authority: Signer<'info>,
     pub wormhole_program: Program<'info, Wormhole>,
     pub system_program: Program<'info, System>,
+    #[account(mut)]
+    pub token_mint: Account<'info, Mint>,
+    #[account(mut)]
+    pub recipient: Account<'info, TokenAccount>,
+    pub token_program: Program<'info, Token>,
 }
 
 #[account]
@@ -86,6 +111,8 @@ pub enum MessageType {
     Verification,
     VerificationResponse,
     AssetCreation,
+    TokenTransfer,
+    TokenTransferResponse,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
@@ -98,6 +125,12 @@ pub struct MessagePayload {
 pub struct VerificationResponse {
     pub request_id: u64,
     pub verified: bool,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub struct TokenTransferResponse {
+    pub transfer_id: u64,
+    pub success: bool,
 }
 
 #[event]
@@ -122,15 +155,22 @@ pub enum ErrorCode {
     InvalidMessageType,
 }
 
-// Helper functions (implement these based on your payload structure)
+// Helper functions
 fn deserialize_verification(data: &[u8]) -> Result<(u64, String)> {
-    // Add deserialization logic
-    Ok((0, String::new()))
+    let request_id = u64::try_from_slice(&data[0..8])?;
+    let did = String::from_utf8(data[8..].to_vec())?;
+    Ok((request_id, did))
 }
 
 fn deserialize_asset_creation(data: &[u8]) -> Result<(Pubkey, String, String)> {
-    // Add deserialization logic
+    // Simplified deserialization (adjust based on payload structure)
     Ok((Pubkey::default(), String::new(), String::new()))
+}
+
+fn deserialize_token_transfer(data: &[u8]) -> Result<(u64, Pubkey, u64)> {
+    let transfer_id = u64::try_from_slice(&data[0..8])?;
+    let amount = u64::try_from_slice(&data[8..16])?;
+    Ok((transfer_id, Pubkey::default(), amount)) // Adjust Pubkey if needed
 }
 
 fn serialize<T: AnchorSerialize>(data: &T) -> Result<Vec<u8>> {
@@ -139,4 +179,17 @@ fn serialize<T: AnchorSerialize>(data: &T) -> Result<Vec<u8>> {
 
 fn deserialize<T: AnchorDeserialize>(data: &[u8]) -> Result<T> {
     Ok(T::try_from_slice(data)?)
+}
+
+impl<'info> ReceiveMessage<'info> {
+    fn into_mint_context(&self) -> CpiContext<'_, '_, '_, 'info, anchor_spl::token::MintTo<'info>> {
+        CpiContext::new(
+            self.token_program.to_account_info(),
+            anchor_spl::token::MintTo {
+                mint: self.token_mint.to_account_info(),
+                to: self.recipient.to_account_info(),
+                authority: self.authority.to_account_info(),
+            },
+        )
+    }
 }

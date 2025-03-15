@@ -1,5 +1,6 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
+require("@nomicfoundation/hardhat-ethers");
 
 // Plugin imports
 require("hardhat-deploy");
@@ -12,22 +13,41 @@ require("solidity-coverage");
 const POLYGON_PRIVATE_KEY = process.env.POLYGON_PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000";
 const POLYGON_RPC_URL = process.env.POLYGON_RPC_URL || "https://polygon-amoy.g.alchemy.com/v2/0ZMvaBwqV9-86WAO9YpqFyL42495Wbcc";
 const POLYGONSCAN_API_KEY = process.env.POLYGONSCAN_API_KEY || "";
+const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com";
+const SOLANA_IDENTITY_PROGRAM_ID = process.env.SOLANA_IDENTITY_PROGRAM_ID || "";
 
 // Default configuration
 const config = {
   solidity: {
-    version: "0.8.19",
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
+    compilers: [
+      {
+        version: "0.8.19",
+        settings: {
+          optimizer: { enabled: true, runs: 200 },
+        },
       },
-    },
+      {
+        version: "0.8.0", 
+        settings: {
+          optimizer: { enabled: true, runs: 200 },
+        },
+      },
+    ],
+  },
+  coverage: {
+    exclude: [
+      "contracts/interfaces/*",
+      "contracts/mocks/*",
+    ],
   },
   networks: {
     // Local networks for testing
     hardhat: {
       chainId: 31337,
+      forking: {
+        url: POLYGON_RPC_URL,
+        enabled: process.env.FORKING_ENABLED === "true",
+      },
     },
     localhost: {
       chainId: 31337,
@@ -39,8 +59,16 @@ const config = {
       url: POLYGON_RPC_URL,
       accounts: POLYGON_PRIVATE_KEY ? [POLYGON_PRIVATE_KEY] : [],
       saveDeployments: true,
-      gasPrice: 35000000000, // 35 Gwei
+      gasPrice: "auto", // Let Hardhat estimate
+      // Or use EIP-1559
+      maxPriorityFeePerGas: "30",  // Fixed value in Gwei
+      maxFeePerGas: "50",          // Fixed value in Gwei
     },
+  },
+  scripts: {
+    "test": "hardhat test",
+    "test-crosschain": "hardhat run scripts/test-crosschain.js",
+    "deploy": "hardhat run scripts/deploy-polygon.js --network amoy",
   },
   etherscan: {
     apiKey: {
