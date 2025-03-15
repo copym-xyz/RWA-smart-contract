@@ -10,6 +10,7 @@ require("solidity-coverage");
 
 // Load environment variables
 const POLYGON_PRIVATE_KEY = process.env.POLYGON_PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000";
+const POLYGON_RPC_URL = process.env.POLYGON_RPC_URL || "https://polygon-amoy.g.alchemy.com/v2/0ZMvaBwqV9-86WAO9YpqFyL42495Wbcc";
 const POLYGONSCAN_API_KEY = process.env.POLYGONSCAN_API_KEY || "";
 
 // Default configuration
@@ -34,17 +35,27 @@ const config = {
     },
     // Polygon Amoy network
     amoy: {
-      chainId: 80002,
-      url: process.env.POLYGON_RPC_URL || "https://polygon-amoy.g.alchemy.com/v2/0ZMvaBwqV9-86WAO9YpqFyL42495Wbcc",
-      accounts: [POLYGON_PRIVATE_KEY],
+      chainId: parseInt(process.env.POLYGON_CHAIN_ID) || 80002,
+      url: POLYGON_RPC_URL,
+      accounts: POLYGON_PRIVATE_KEY ? [POLYGON_PRIVATE_KEY] : [],
       saveDeployments: true,
-      gasPrice: 35000000000, 
-    }
+      gasPrice: 35000000000, // 35 Gwei
+    },
   },
   etherscan: {
     apiKey: {
       polygonAmoy: POLYGONSCAN_API_KEY,
     },
+    customChains: [
+      {
+        network: "amoy",
+        chainId: 80002,
+        urls: {
+          apiURL: "https://api-amoy.polygonscan.com/api",
+          browserURL: "https://amoy.polygonscan.com",
+        },
+      },
+    ],
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
@@ -55,14 +66,21 @@ const config = {
   },
   namedAccounts: {
     deployer: {
-      default: 0,
+      default: 0, // First account from accounts array
     },
     verifier: {
-      default: 1,
+      default: 1, // Second account (if available)
     },
   },
   mocha: {
-    timeout: 200000, 
+    timeout: 200000, // 200 seconds
+  },
+  paths: {
+    sources: "./contracts",
+    tests: "./test",
+    cache: "./cache",
+    artifacts: "./artifacts",
+    deployments: "./deployments",
   },
 };
 
