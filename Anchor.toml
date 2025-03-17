@@ -1,0 +1,13 @@
+[toolchain]
+anchor_version = "0.30.0"
+
+
+[programs.devnet]
+identity_program = "HU18d3qUrvLK52mQ2AoNKEnV6m1B6VreZ8M7eUE5GBew"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "devnet"
+wallet = "/home/copym/new-wallet.json"

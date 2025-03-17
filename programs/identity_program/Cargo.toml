@@ -1,15 +1,27 @@
 [package]
 name = "identity_program"
 version = "0.1.0"
+description = "Cross-chain identity verification program"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
 
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+
 [dependencies]
-anchor-lang = "0.30.0"
-wormhole-anchor-sdk = "0.1.0"
-anchor-spl = "0.30.0"
+anchor-lang = "0.30.1"
+anchor-spl = "0.30.1"
+solana-program = "1.18.26"
+wormhole-anchor-sdk = "0.30.1-alpha.3"
+num_enum = "0.6.1"
+num_enum_derive = "0.6.1"
+
 
 [profile.release]
 overflow-checks = true

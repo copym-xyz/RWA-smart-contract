@@ -1,0 +1,1 @@
+/mnt/c/Users/LENOVO\ T14S/Desktop/COPY_M/smart-contarct/programs/identity_program/target/debug/libidentity_program.rlib: /mnt/c/Users/LENOVO\ T14S/Desktop/COPY_M/smart-contarct/programs/identity_program/src/lib.rs

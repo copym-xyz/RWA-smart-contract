@@ -1,0 +1,11 @@
+/mnt/c/Users/LENOVO T14S/Desktop/COPY_M/smart-contarct/programs/identity_program/target/debug/deps/libppv_lite86-c6f3fba595235e7c.rmeta: /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ppv-lite86-0.2.21/src/lib.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ppv-lite86-0.2.21/src/soft.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ppv-lite86-0.2.21/src/types.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ppv-lite86-0.2.21/src/x86_64/mod.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ppv-lite86-0.2.21/src/x86_64/sse2.rs
+
+/mnt/c/Users/LENOVO T14S/Desktop/COPY_M/smart-contarct/programs/identity_program/target/debug/deps/libppv_lite86-c6f3fba595235e7c.rlib: /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ppv-lite86-0.2.21/src/lib.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ppv-lite86-0.2.21/src/soft.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ppv-lite86-0.2.21/src/types.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ppv-lite86-0.2.21/src/x86_64/mod.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ppv-lite86-0.2.21/src/x86_64/sse2.rs
+
+/mnt/c/Users/LENOVO T14S/Desktop/COPY_M/smart-contarct/programs/identity_program/target/debug/deps/ppv_lite86-c6f3fba595235e7c.d: /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ppv-lite86-0.2.21/src/lib.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ppv-lite86-0.2.21/src/soft.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ppv-lite86-0.2.21/src/types.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ppv-lite86-0.2.21/src/x86_64/mod.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ppv-lite86-0.2.21/src/x86_64/sse2.rs
+
+/home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ppv-lite86-0.2.21/src/lib.rs:
+/home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ppv-lite86-0.2.21/src/soft.rs:
+/home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ppv-lite86-0.2.21/src/types.rs:
+/home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ppv-lite86-0.2.21/src/x86_64/mod.rs:
+/home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ppv-lite86-0.2.21/src/x86_64/sse2.rs:

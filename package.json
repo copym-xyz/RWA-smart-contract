@@ -11,11 +11,11 @@
     "test": "npx hardhat test",
     "test:crosschain": "npx hardhat run scripts/test-crosschain.js",
     "coverage": "npx hardhat coverage",
-    "solana:build": "cd solana-programs/identity-program && anchor build",
-    "solana:deploy": "cd solana-programs/identity-program && anchor deploy --provider.cluster devnet",
+    "solana:build": "cd programs/identity-program && anchor build",
+    "solana:deploy": "cd programs/identity-program && anchor deploy --provider.cluster devnet",
     "solana:test": "cd solana-programs/identity-program && anchor test"
   },
-  "dependencies": {
+  "dependencies": { 
     "@openzeppelin/contracts": "^4.9.3",
     "@project-serum/anchor": "^0.26.0",
     "@solana/spl-token": "^0.4.13",

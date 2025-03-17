@@ -1,0 +1,11 @@
+/mnt/c/Users/LENOVO T14S/Desktop/COPY_M/smart-contarct/programs/identity_program/target/debug/deps/libctr-c748cbac8cfae615.rmeta: /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ctr-0.8.0/src/lib.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ctr-0.8.0/src/flavors.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ctr-0.8.0/src/flavors/ctr128.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ctr-0.8.0/src/flavors/ctr32.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ctr-0.8.0/src/flavors/ctr64.rs
+
+/mnt/c/Users/LENOVO T14S/Desktop/COPY_M/smart-contarct/programs/identity_program/target/debug/deps/libctr-c748cbac8cfae615.rlib: /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ctr-0.8.0/src/lib.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ctr-0.8.0/src/flavors.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ctr-0.8.0/src/flavors/ctr128.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ctr-0.8.0/src/flavors/ctr32.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ctr-0.8.0/src/flavors/ctr64.rs
+
+/mnt/c/Users/LENOVO T14S/Desktop/COPY_M/smart-contarct/programs/identity_program/target/debug/deps/ctr-c748cbac8cfae615.d: /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ctr-0.8.0/src/lib.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ctr-0.8.0/src/flavors.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ctr-0.8.0/src/flavors/ctr128.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ctr-0.8.0/src/flavors/ctr32.rs /home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ctr-0.8.0/src/flavors/ctr64.rs
+
+/home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ctr-0.8.0/src/lib.rs:
+/home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ctr-0.8.0/src/flavors.rs:
+/home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ctr-0.8.0/src/flavors/ctr128.rs:
+/home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ctr-0.8.0/src/flavors/ctr32.rs:
+/home/copym/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ctr-0.8.0/src/flavors/ctr64.rs:
