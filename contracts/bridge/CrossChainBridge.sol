@@ -7,6 +7,7 @@ import "../identity/SoulboundNFT.sol";
 import "./IWormhole.sol";
 import "./ITokenBridge.sol";
 import "./CommodityToken.sol";
+import "./ISoulboundNFT.sol";
 
 contract CrossChainBridge is AccessControl, IBridge {
     bytes32 public constant BRIDGE_ADMIN_ROLE = keccak256("BRIDGE_ADMIN_ROLE");
@@ -15,12 +16,32 @@ contract CrossChainBridge is AccessControl, IBridge {
     IWormhole public wormhole;
     ITokenBridge public tokenBridge;
 
-
+    /**
+ * @dev Check if an SBT has valid credentials
+ * @param soulboundContract The address of the SoulboundNFT contract
+ * @param tokenId The token ID to check
+ * @return Whether the SBT has valid credentials
+ */
+function _checkSbtCredentials(address soulboundContract, uint256 tokenId) internal view returns (bool) {
+    SoulboundNFT soulbound = SoulboundNFT(soulboundContract);
+    
+    // Get credential hashes from SBT
+    bytes32[] memory credentialHashes = soulbound.getTokenCredentials(tokenId);
+    
+    // Check if there's at least one valid credential
+    for (uint256 i = 0; i < credentialHashes.length; i++) {
+        if (soulbound.isCredentialValid(tokenId, credentialHashes[i])) {
+            return true;
+        }
+    }
+    
+    return false;
+}
 
     function _checkRateLimit(address sender) internal {
         if (lastRequestTime[sender] != 0) {
             require(
-                block.timestamp >= lastRequestTime[sender] + requestCooldown, 
+                block.timestamp >= lastRequestTime[sender] + requestCooldown,
                 "Rate limit exceeded"
             );
         }
@@ -28,7 +49,9 @@ contract CrossChainBridge is AccessControl, IBridge {
     }
 
     // Internal method to convert Wormhole chain ID to chain name
-    function _getChainIdString(uint16 chainId) internal pure returns (string memory) {
+    function _getChainIdString(
+        uint16 chainId
+    ) internal pure returns (string memory) {
         if (chainId == 1) return "solana_devnet";
         if (chainId == 2) return "ethereum";
         if (chainId == 5) return "polygon";
@@ -63,7 +86,9 @@ contract CrossChainBridge is AccessControl, IBridge {
     }
 
     // Internal method to get Wormhole chain ID
-    function _getWormholeChainId(string memory chainName) internal pure returns (uint16) {
+    function _getWormholeChainId(
+        string memory chainName
+    ) internal pure returns (uint16) {
         if (keccak256(bytes(chainName)) == keccak256(bytes("solana_devnet")))
             return 1;
         if (keccak256(bytes(chainName)) == keccak256(bytes("ethereum")))
@@ -76,10 +101,10 @@ contract CrossChainBridge is AccessControl, IBridge {
     mapping(string => address) public commodityTokens; // commodityType => tokenAddress
     mapping(string => string) public bridgeEndpoints;
     uint32 private nonceCounter;
-    
+
     // Replay protection
     mapping(bytes32 => bool) public processedMessages;
-    
+
     // Rate limiting
     mapping(address => uint256) public lastRequestTime;
     uint256 public requestCooldown = 1 minutes; // Adjustable cooldown period
@@ -108,6 +133,7 @@ contract CrossChainBridge is AccessControl, IBridge {
         string sourceChain;
         string targetChain;
         string did;
+        uint256 sbtTokenId;
         bool verified;
         uint256 timestamp;
     }
@@ -128,9 +154,10 @@ contract CrossChainBridge is AccessControl, IBridge {
         bool verified;
         uint256 timestamp;
     }
-    
-    mapping(uint256 => CredentialVerificationRequest) public credentialVerificationRequests;
-    
+
+    mapping(uint256 => CredentialVerificationRequest)
+        public credentialVerificationRequests;
+
     // New: Role synchronization tracking
     struct RoleSyncRequest {
         uint256 requestId;
@@ -141,7 +168,7 @@ contract CrossChainBridge is AccessControl, IBridge {
         string targetChain;
         uint256 timestamp;
     }
-    
+
     mapping(uint256 => RoleSyncRequest) public roleSyncRequests;
 
     struct TokenTransferRequest {
@@ -159,7 +186,8 @@ contract CrossChainBridge is AccessControl, IBridge {
         uint256 indexed requestId,
         string did,
         string sourceChain,
-        string targetChain
+        string targetChain,
+        uint256 sbtTokenId
     );
     event VerificationCompleted(uint256 indexed requestId, bool verified);
     event BridgeEndpointUpdated(string chainId, string endpoint);
@@ -176,7 +204,7 @@ contract CrossChainBridge is AccessControl, IBridge {
         string targetChain
     );
     event TokenTransferCompleted(uint256 indexed transferId, bool success);
-    
+
     // New events
     event CredentialVerificationRequested(
         uint256 indexed requestId,
@@ -196,10 +224,7 @@ contract CrossChainBridge is AccessControl, IBridge {
         string sourceChain,
         string targetChain
     );
-    event RoleSynchronizationCompleted(
-        uint256 indexed requestId,
-        bool success
-    );
+    event RoleSynchronizationCompleted(uint256 indexed requestId, bool success);
     event MessageReplayed(bytes32 messageId);
     event RateLimitExceeded(address sender, uint256 cooldownRemaining);
 
@@ -211,7 +236,10 @@ contract CrossChainBridge is AccessControl, IBridge {
         nonceCounter = 0;
     }
 
-    function registerCommodityToken(string memory commodityType, address tokenAddress) external onlyRole(BRIDGE_ADMIN_ROLE) {
+    function registerCommodityToken(
+        string memory commodityType,
+        address tokenAddress
+    ) external onlyRole(BRIDGE_ADMIN_ROLE) {
         commodityTokens[commodityType] = tokenAddress;
     }
 
@@ -222,74 +250,98 @@ contract CrossChainBridge is AccessControl, IBridge {
         bridgeEndpoints[chainId] = endpoint;
         emit BridgeEndpointUpdated(chainId, endpoint);
     }
-    
+
     /**
      * @dev Set the cooldown period for request rate limiting
      */
-    function setRequestCooldown(uint256 newCooldown) external onlyRole(BRIDGE_ADMIN_ROLE) {
+    function setRequestCooldown(
+        uint256 newCooldown
+    ) external onlyRole(BRIDGE_ADMIN_ROLE) {
         requestCooldown = newCooldown;
     }
 
-    function verifyIdentity(
-        address soulboundContract,
-        uint256 tokenId,
-        string memory targetChain
-    ) external view override returns (bool) {
-        SoulboundNFT soulbound = SoulboundNFT(soulboundContract);
-        string memory did = soulbound.getDID(tokenId);
-        require(bytes(did).length > 0, "Invalid DID");
+   function verifyIdentity(
+    address soulboundContract,
+    uint256 tokenId,
+    string memory targetChain
+) external view override returns (bool) {
+    SoulboundNFT soulbound = SoulboundNFT(soulboundContract);
+    string memory did = soulbound.getDID(tokenId);
+    require(bytes(did).length > 0, "Invalid DID");
 
-        string memory currentChain = _getCurrentChainId();
-        if (keccak256(bytes(currentChain)) == keccak256(bytes(targetChain))) {
-            return true;
-        }
-
-        string memory targetAddress = soulbound.getChainAddress(
-            tokenId,
-            targetChain
-        );
-        return bytes(targetAddress).length > 0;
+    // First check if the SBT has valid credentials
+    bool hasValidCredentials = _checkSbtCredentials(soulboundContract, tokenId);
+    if (!hasValidCredentials) {
+        return false;
     }
+
+    string memory currentChain = _getCurrentChainId();
+    if (keccak256(bytes(currentChain)) == keccak256(bytes(targetChain))) {
+        return true;
+    }
+
+    string memory targetAddress = soulbound.getChainAddress(
+        tokenId,
+        targetChain
+    );
+    return bytes(targetAddress).length > 0;
+}
 
     /**
      * @dev Request verification of identity across chains
      */
-    function requestVerification(
-        string memory did,
-        string memory targetChain
-    ) external returns (uint256) {
-        // Rate limiting check
-        _checkRateLimit(msg.sender);
-        
-        require(bytes(did).length > 0, "Invalid DID");
-        require(
-            bytes(bridgeEndpoints[targetChain]).length > 0,
-            "Target chain not supported"
-        );
+   function requestVerification(
+    string memory did,
+    string memory targetChain
+) external  returns (uint256) {
+    // Rate limiting check
+    _checkRateLimit(msg.sender);
+    
+    require(bytes(did).length > 0, "Invalid DID");
+    require(
+        bytes(bridgeEndpoints[targetChain]).length > 0,
+        "Target chain not supported"
+    );
 
+    // Get SoulboundNFT token ID for this DID
+    address soulboundContract = address(0); // Replace with actual address from config
+    ISoulboundNFT soulbound = ISoulboundNFT(soulboundContract);
+    
+    try soulbound.getTokenIdByDID(did) returns (uint256 tokenId) {
+        // Check if caller is the owner of the SBT
+        require(
+            soulbound.ownerOf(tokenId) == msg.sender,
+            "Caller is not the SBT owner"
+        );
+        
         string memory currentChain = _getCurrentChainId();
         uint256 requestId = requestCounter++;
+        
         verificationRequests[requestId] = VerificationRequest({
             requestId: requestId,
             sourceChain: currentChain,
             targetChain: targetChain,
             did: did,
+            sbtTokenId: tokenId, // Store SBT token ID
             verified: false,
             timestamp: block.timestamp
         });
-
+        
+        // Include SBT token ID in the cross-chain message
         bytes memory payload = abi.encode(
             MessageType.VERIFICATION,
-            abi.encode(requestId, did),
+            abi.encode(requestId, did, tokenId),
             block.timestamp,
-            keccak256(abi.encodePacked(requestId, did, block.timestamp))
+            keccak256(abi.encodePacked(requestId, did, tokenId, block.timestamp))
         );
         sendCrossChainMessage(targetChain, payload);
-
-        emit VerificationRequested(requestId, did, currentChain, targetChain);
+        
+        emit VerificationRequested(requestId, did, currentChain, targetChain, tokenId);
         return requestId;
+    } catch (bytes memory) {
+        revert("DID not associated with any SBT");
     }
-    
+}
     /**
      * @dev Request verification of a credential across chains
      */
@@ -299,7 +351,7 @@ contract CrossChainBridge is AccessControl, IBridge {
     ) external returns (uint256) {
         // Rate limiting check
         _checkRateLimit(msg.sender);
-        
+
         require(
             bytes(bridgeEndpoints[targetChain]).length > 0,
             "Target chain not supported"
@@ -307,8 +359,10 @@ contract CrossChainBridge is AccessControl, IBridge {
 
         string memory currentChain = _getCurrentChainId();
         uint256 requestId = requestCounter++;
-        
-        credentialVerificationRequests[requestId] = CredentialVerificationRequest({
+
+        credentialVerificationRequests[
+            requestId
+        ] = CredentialVerificationRequest({
             requestId: requestId,
             credentialHash: credentialHash,
             sourceChain: currentChain,
@@ -321,14 +375,21 @@ contract CrossChainBridge is AccessControl, IBridge {
             MessageType.CREDENTIAL_VERIFICATION,
             abi.encode(requestId, credentialHash),
             block.timestamp,
-            keccak256(abi.encodePacked(requestId, credentialHash, block.timestamp))
+            keccak256(
+                abi.encodePacked(requestId, credentialHash, block.timestamp)
+            )
         );
         sendCrossChainMessage(targetChain, payload);
 
-        emit CredentialVerificationRequested(requestId, credentialHash, currentChain, targetChain);
+        emit CredentialVerificationRequested(
+            requestId,
+            credentialHash,
+            currentChain,
+            targetChain
+        );
         return requestId;
     }
-    
+
     /**
      * @dev Synchronize role assignments across chains
      */
@@ -345,7 +406,7 @@ contract CrossChainBridge is AccessControl, IBridge {
 
         string memory currentChain = _getCurrentChainId();
         uint256 requestId = requestCounter++;
-        
+
         roleSyncRequests[requestId] = RoleSyncRequest({
             requestId: requestId,
             role: role,
@@ -360,16 +421,24 @@ contract CrossChainBridge is AccessControl, IBridge {
             MessageType.ROLE_SYNCHRONIZATION,
             abi.encode(requestId, role, account, isGrant),
             block.timestamp,
-            keccak256(abi.encodePacked(requestId, role, account, isGrant, block.timestamp))
+            keccak256(
+                abi.encodePacked(
+                    requestId,
+                    role,
+                    account,
+                    isGrant,
+                    block.timestamp
+                )
+            )
         );
         sendCrossChainMessage(targetChain, payload);
 
         emit RoleSynchronizationRequested(
-            requestId, 
-            role, 
-            account, 
-            isGrant, 
-            currentChain, 
+            requestId,
+            role,
+            account,
+            isGrant,
+            currentChain,
             targetChain
         );
         return requestId;
@@ -391,7 +460,7 @@ contract CrossChainBridge is AccessControl, IBridge {
         verificationRequests[requestId].verified = verified;
         emit VerificationCompleted(requestId, verified);
     }
-    
+
     /**
      * @dev Complete credential verification process
      */
@@ -411,7 +480,7 @@ contract CrossChainBridge is AccessControl, IBridge {
         credentialVerificationRequests[requestId].verified = verified;
         emit CredentialVerificationCompleted(requestId, verified);
     }
-    
+
     /**
      * @dev Complete role synchronization process
      */
@@ -460,7 +529,7 @@ contract CrossChainBridge is AccessControl, IBridge {
         bytes memory data
     ) external {
         bytes memory payload = abi.encode(
-            MessageType.CUSTOM, 
+            MessageType.CUSTOM,
             data,
             block.timestamp,
             keccak256(abi.encodePacked(data, block.timestamp, nonceCounter))
@@ -490,7 +559,7 @@ contract CrossChainBridge is AccessControl, IBridge {
     ) external {
         // Rate limiting
         _checkRateLimit(msg.sender);
-        
+
         require(
             bytes(bridgeEndpoints[targetChain]).length > 0,
             "Target chain not supported"
@@ -516,7 +585,14 @@ contract CrossChainBridge is AccessControl, IBridge {
             MessageType.TOKEN_TRANSFER,
             abi.encode(transferId, tokenAddress, amount),
             block.timestamp,
-            keccak256(abi.encodePacked(transferId, tokenAddress, amount, block.timestamp))
+            keccak256(
+                abi.encodePacked(
+                    transferId,
+                    tokenAddress,
+                    amount,
+                    block.timestamp
+                )
+            )
         );
         sendCrossChainMessage(targetChain, payload);
 
@@ -557,56 +633,76 @@ contract CrossChainBridge is AccessControl, IBridge {
         emit TokenTransferCompleted(transferId, success);
     }
 
-  /**
+    /**
      * @dev Process incoming cross-chain messages with replay protection
      */
     function receiveCrossChainMessage(
-        uint16 sourceChain, 
-        bytes32 sourceAddress, 
-        uint64, 
+        uint16 sourceChain,
+        bytes32 sourceAddress,
+        uint64,
         bytes memory payload
     ) external {
         require(msg.sender == address(wormhole), "Unauthorized caller");
-        
+
         // Decode the message with full security fields
-        (MessageType msgType, bytes memory data, uint256 timestamp, bytes32 messageId) = 
-            abi.decode(payload, (MessageType, bytes, uint256, bytes32));
-        
+        (
+            MessageType msgType,
+            bytes memory data,
+            uint256 timestamp,
+            bytes32 messageId
+        ) = abi.decode(payload, (MessageType, bytes, uint256, bytes32));
+
         // Check for message replay
         if (processedMessages[messageId]) {
             emit MessageReplayed(messageId);
             return;
         }
-        
+
         // Mark message as processed
         processedMessages[messageId] = true;
-        
+
         // Check if message is too old (optional time-based expiry)
         // require(block.timestamp - timestamp < 1 days, "Message expired");
-        
+
         if (msgType == MessageType.VERIFICATION_RESPONSE) {
-            (uint256 requestId, bool verified) = abi.decode(data, (uint256, bool));
-            
+            (uint256 requestId, bool verified) = abi.decode(
+                data,
+                (uint256, bool)
+            );
+
             // Update verification status
-            VerificationRequest storage request = verificationRequests[requestId];
+            VerificationRequest storage request = verificationRequests[
+                requestId
+            ];
             if (request.requestId == requestId && !request.verified) {
                 request.verified = verified;
                 emit VerificationCompleted(requestId, verified);
             }
         } else if (msgType == MessageType.CREDENTIAL_VERIFICATION) {
-            (uint256 requestId, bytes32 credentialHash) = abi.decode(data, (uint256, bytes32));
-            
+            (uint256 requestId, bytes32 credentialHash) = abi.decode(
+                data,
+                (uint256, bytes32)
+            );
+
             // Process credential verification request
             // This would interact with the SoulboundNFT contract to verify the credential
             // For now, we'll just emit an event
-            emit CredentialVerificationRequested(requestId, credentialHash, 
-                _getChainIdString(sourceChain), _getCurrentChainId());
-            
+            emit CredentialVerificationRequested(
+                requestId,
+                credentialHash,
+                _getChainIdString(sourceChain),
+                _getCurrentChainId()
+            );
+
             // In a real implementation, you would check the credential and send a response
         } else if (msgType == MessageType.ROLE_SYNCHRONIZATION) {
-            (uint256 requestId, bytes32 role, address account, bool isGrant) = 
-                abi.decode(data, (uint256, bytes32, address, bool));
-            
+            (
+                uint256 requestId,
+                bytes32 role,
+                address account,
+                bool isGrant
+            ) = abi.decode(data, (uint256, bytes32, address, bool));
+
             // Process role synchronization
             if (isGrant) {
                 // Grant the role on this chain
@@ -615,23 +711,27 @@ contract CrossChainBridge is AccessControl, IBridge {
                 // Revoke the role on this chain
                 revokeRole(role, account);
             }
-            
+
             // Emit completion event
             emit RoleSynchronizationCompleted(requestId, true);
         } else if (msgType == MessageType.TOKEN_TRANSFER) {
-            (uint256 transferId, address tokenAddress, uint256 amount) = 
-                abi.decode(data, (uint256, address, uint256));
-            
+            (uint256 transferId, address tokenAddress, uint256 amount) = abi
+                .decode(data, (uint256, address, uint256));
+
             // Process token transfer
             address token = tokenAddress;
             // In production, you might need to map the token address between chains
-            
+
             // Mint on this chain if we're on Polygon
-            if (keccak256(bytes(_getCurrentChainId())) == keccak256(bytes("80002"))){ // Polygon Amoy
+            if (
+                keccak256(bytes(_getCurrentChainId())) ==
+                keccak256(bytes("80002"))
+            ) {
+                // Polygon Amoy
                 CommodityToken(token).mint(msg.sender, amount);
             }
-            
+
             emit TokenTransferCompleted(transferId, true);
         }
-    } 
-} 
+    }
+}
