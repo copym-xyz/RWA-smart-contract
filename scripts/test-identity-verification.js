@@ -15,7 +15,7 @@ async function main() {
   console.log(`Connected to Polygon with address: ${wallet.address}`);
   
   // Load contracts with hardcoded addresses
-  const soulboundNFTAddress = "0x26F28bAEF4813d6768Ce70B7f4b2f4827A5D738D";
+  const soulboundNFTAddress = "0x224434fd5e24Cc3EA7E227327B6f4be0A43969F9 ";
   const bridgeAddress = "0xEDe05747FB7d095d3562e7169B5632A3fBe6e9Bd";
   
   console.log(`Using SoulboundNFT at: ${soulboundNFTAddress}`);
